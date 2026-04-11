@@ -34,12 +34,13 @@ You'll learn:
 - Volume mounting for data access
 - Building reproducible data science environments
 
-## Template Repository
+## Example Repository
 
-For a complete containerized data science project, see the **LA Crime Analysis** template:
-- GitHub: https://github.com/[instructor-username]/la-crime-analysis
+For a complete containerized data science project, see the **LA Crime Analysis** project:
+- GitHub: https://github.com/natelangholz/la-crime-analysis
 - Features: Multi-stage Dockerfiles, docker-compose, development containers
 - Demonstrates: Complete workflow from data fetching to model serving
+- Use as reference for understanding containerization in practice
 
 ## What is a Container?
 
@@ -630,4 +631,4 @@ See the LA Crime Analysis template for complete examples of these patterns.
 - [Podman Tutorial](https://github.com/containers/podman/blob/main/docs/tutorials/podman_tutorial.md)
 - [Podman vs Docker](https://docs.podman.io/en/latest/markdown/podman.1.html)
 - [Container Best Practices](https://developers.redhat.com/blog/2016/02/24/10-things-to-avoid-in-docker-containers)
-- [LA Crime Analysis Template](https://github.com/[instructor-username]/la-crime-analysis) - Complete containerized project
+- [LA Crime Analysis Example](https://github.com/natelangholz/la-crime-analysis) - Complete containerized project

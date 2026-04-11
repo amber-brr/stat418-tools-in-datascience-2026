@@ -20,12 +20,12 @@ You'll learn:
 - Forking and contributing to open source
 - Building a data science portfolio on GitHub
 
-## Template Repository
+## Example Repository
 
-For a complete example of these concepts in action, see the **LA Crime Analysis** template:
-- GitHub: https://github.com/[instructor-username]/la-crime-analysis
+For a complete example of these concepts in action, see the **LA Crime Analysis** project:
+- GitHub: https://github.com/natelangholz/la-crime-analysis
 - Demonstrates: Pull requests, Issues, Actions, professional documentation
-- Students: Fork this for your final projects
+- Use as reference for understanding professional GitHub workflows
 
 ## Example 1: Feature Branch Workflow
 

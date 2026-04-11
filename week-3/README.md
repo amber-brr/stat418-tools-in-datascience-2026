@@ -8,15 +8,13 @@ This week covers GitHub workflows for team collaboration, containerization with 
 
 ### Slides
 
-- [slides-week-3.pptx](slides-week-3.pptx) - Complete lecture presentation (62 slides)
-- slides-week-3.pdf - PDF version (will be added after lecture)
+- [slides-week-3.pdf](slides-week-3.pdf) 
 
 ### Template Repository
 
 **LA Crime Analysis Project** - Complete data science project template demonstrating all concepts from this week:
-- GitHub: https://github.com/[instructor-username]/la-crime-analysis
+- GitHub: https://github.com/natelangholz/la-crime-analysis
 - Features: Real LA crime data, GitHub workflows, containerization, uv package management
-- Students: Fork this template for your final projects
 
 ### GitHub Resources
 
@@ -79,15 +77,3 @@ This week covers GitHub workflows for team collaboration, containerization with 
 ## Homework
 
 Continue working on Assignment 1 (due next week before Week 4 class).
-
-## Final Project
-
-For your final project, you should:
-1. Fork the LA Crime Analysis template repository
-2. Use GitHub for version control and collaboration
-3. Containerize your application with Podman
-4. Manage dependencies with uv
-5. Set up GitHub Actions for testing
-6. Document your work professionally
-
-This demonstrates the complete workflow covered in Week 3.
