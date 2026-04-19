@@ -8,7 +8,7 @@ This week covers acquiring data from the web using APIs and web scraping. You'll
 
 ### Slides
 
-[slides-week-4.pptx](slides-week-4.pptx)
+[slides-week-4](slides-week-4.pdf)
 
 ### Key Topics
 
@@ -41,7 +41,7 @@ This week covers acquiring data from the web using APIs and web scraping. You'll
 
 ## Homework Assignment 2
 
-**Due**: Two weeks from today (before Week 6 class)
+**Due**: One week from today (before Week 5 class)
 
 See [assignment-2/](assignment-2/) for details.
 
