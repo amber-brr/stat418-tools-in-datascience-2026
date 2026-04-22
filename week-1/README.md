@@ -9,9 +9,8 @@ This week will see an introduction to the course. There will be class introducti
 ## Resources
 
 ### Slides
-**Note: PDF slides will be available soon**
 
-[slides-week-1.pdf](slides-week-1.pdf) *(Coming soon)*
+[slides-week-1.pdf](slides-week-1.pdf) 
 
 ### Setup Guide
 See [STUDENT_SETUP.md](../STUDENT_SETUP.md)

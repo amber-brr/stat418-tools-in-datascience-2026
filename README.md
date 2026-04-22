@@ -53,11 +53,11 @@ A final project will be completed as individuals. The project will encourage col
 
 [Week 6](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-6) \[5/5\]: Final Project proposal presentations. Building interactive applications with Streamlit and cloud deployment.
 
-[Week 7](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-7) \[5/12\]: Containerization with Podman. Writing Dockerfiles and reproducible environments. Introduction to MCP servers and tool creation.
+[Week 7](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-7) \[5/12\]: Building APIs with FastAPI for model serving. MCP (Model Context Protocol) servers and tool creation. Advanced containerization patterns for production deployment.
 
-[Week 8](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-8) \[5/19\]: Building APIs for model deployment. Exploration of FastAPI and cloud deployment patterns. AI agents and MCP integration.
+[Week 8](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-8) \[5/19\]: AI agents and autonomous systems. MCP integration with AI assistants. Agent architectures (ReAct, Plan-and-Execute) and tool orchestration.
 
-[Week 9](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-9) \[5/26\]: CI/CD with GitHub Actions. Automated testing, code quality, and full-stack architecture design.
+[Week 9](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-9) \[5/26\]: CI/CD with GitHub Actions. Automated testing and deployment. Full-stack architecture design and production best practices.
 
 [Week 10](https://github.com/natelangholz/stat418-tools-in-datascience-2026/tree/master/week-10) \[6/2\]: Student Final Presentations.
 

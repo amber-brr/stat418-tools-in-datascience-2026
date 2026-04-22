@@ -8,7 +8,7 @@ This guide will help you set up your development environment for STAT 418 on mac
 2. **Python 3.11+** - Programming language
 3. **uv** - Fast Python package manager
 4. **VSCode** - Code editor
-5. **Claude Code (Cline)** - AI coding assistant with OpenRouter
+5. **AI Coding Assistant** - Either Cline or Claude Code (official) with OpenRouter
 
 **Time Required**: 30-45 minutes
 
@@ -138,10 +138,18 @@ Open VSCode and install these extensions:
 - Search for "Python"
 - Click Install on "Python" by Microsoft
 
-**2. Cline (Claude Code) Extension**
+**2. AI Coding Assistant (Choose ONE)**
+
+**Option A: Cline** (Recommended for now - tested and working)
 - Search for "Cline"
 - Click Install on "Cline" (formerly Claude Dev)
-- This is our AI coding assistant that works with OpenRouter
+- Works with OpenRouter for free/paid models
+
+**Option B: Claude Code** (Official Anthropic extension - newer)
+- Search for "Claude Code"
+- Click Install on "Claude Code" by Anthropic
+- Official extension, may have better integration
+- **Note**: Configuration with OpenRouter is still being tested
 
 **3. GitLens Extension**
 - Search for "GitLens"
@@ -155,9 +163,9 @@ Open VSCode and install these extensions:
 
 ---
 
-## 5. OpenRouter + Claude Code Setup
+## 5. AI Coding Assistant Setup with OpenRouter
 
-Claude Code (Cline) is an AI coding assistant that runs in VSCode. We'll use it with OpenRouter's free API to access Claude and other models.
+We'll set up an AI coding assistant in VSCode using OpenRouter's API to access Claude and other models. You have two options:
 
 ### Step 1: Get a Free OpenRouter API Key
 
@@ -171,7 +179,13 @@ Claude Code (Cline) is an AI coding assistant that runs in VSCode. We'll use it 
 
 **Important**: OpenRouter provides free credits for new users and has free models available. The free tier is sufficient for this course.
 
-### Step 2: Configure Claude Code (Cline)
+### Step 2: Configure Your AI Assistant
+
+Choose **ONE** of the following options:
+
+---
+
+#### **Option A: Cline (Recommended - Tested and Working)**
 
 1. In VSCode, click the Cline icon in the left sidebar (robot/chat icon)
 2. Click the settings gear icon (⚙️) in the Cline panel
@@ -180,14 +194,42 @@ Claude Code (Cline) is an AI coding assistant that runs in VSCode. We'll use it 
    - **API Key**: Paste your OpenRouter API key
    - **Model**: Select one of the recommended free models below, or "anthropic/claude-3.5-sonnet" (paid, but highest quality)
 
-### Step 3: Test Claude Code
-
+**Test Cline:**
 1. Create a new file: `test.py`
 2. Click the Cline icon in the left sidebar
 3. Type: "Write a function that adds two numbers and returns the result"
 4. Press Enter
 
 If you get a response with Python code, you're all set! ✓
+
+---
+
+#### **Option B: Claude Code (Official - Newer, Being Tested)**
+
+**Note**: This is the official Anthropic extension. Configuration with OpenRouter is still being verified for the course.
+
+1. In VSCode, click the Claude Code icon in the left sidebar
+2. Open the extension settings (gear icon or Command Palette → "Claude Code: Settings")
+3. Configure the following:
+   - **API Provider/Base URL**: Look for custom API endpoint settings
+   - If available, set to: `https://openrouter.ai/api/v1`
+   - **API Key**: Paste your OpenRouter API key
+   - **Model**: Specify the model (e.g., `anthropic/claude-3.5-sonnet`)
+
+**Alternative Configuration** (if custom endpoints aren't supported):
+- You may need to use Anthropic's API directly
+- Visit [console.anthropic.com](https://console.anthropic.com/) to get an Anthropic API key
+- Note: Anthropic API has different pricing than OpenRouter
+
+**Test Claude Code:**
+1. Create a new file: `test.py`
+2. Open Claude Code panel
+3. Ask: "Write a function that adds two numbers and returns the result"
+4. If you get a response with Python code, you're all set! ✓
+
+**Important**: If Claude Code doesn't work with OpenRouter by the second lecture, we'll provide updated instructions or recommend using Cline instead.
+
+---
 
 ### Top 3 Free Models for Coding
 
