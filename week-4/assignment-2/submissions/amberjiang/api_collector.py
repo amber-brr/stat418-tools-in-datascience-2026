@@ -24,17 +24,21 @@ import time
 from typing import Dict,List
 from dotenv import load_dotenv
 import logging
+import json
 
 load_dotenv()
 
 class TMDBCollector():
     def __init__(self):
-        self.api_key = os.getenv('TMBD_API_KEY')
+        self.api_key = os.getenv('TMDB_API_KEY')
         self.base_url = 'https://api.themoviedb.org/3'
         self.session = requests.Session()
         self.last_request_time = 0
         self.main_request_interval = 0.25 # 4 requests per second
-
+        
+        os.makedirs('logs', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
+        
         logging.basicConfig(
             filename='logs/api_collector.log',
             level=logging.INFO,
@@ -47,7 +51,7 @@ class TMDBCollector():
             time.sleep(self.main_request_interval - elapsed) # sleep for the rest of the time until the main request interval time
         self.last_request_time = time.time() # set the last request time to now
     
-    def _make_request(self, endpoint: str, params: Dict = None) -> Dict:
+    def _make_request(self, endpoint: str, params: Dict = None, max_retries: int = 3) -> Dict:
         """Make API request with error handling"""
         self._rate_limit() 
 
@@ -55,16 +59,20 @@ class TMDBCollector():
             params = {}
         params['api_key'] = self.api_key
 
-        url = f"{self.base_url}"/{endpoint}
+        url = f"{self.base_url}/{endpoint}"
 
-        try:
-            response = self.session.get(url, params=params, timeout=10)
-            response.raise_for_status() # checks HTTP status code of a response and raises HTTPError if the status is 4xx or 5xx
-            logging.info(f"Successfully fetched {endpoint}") # log info message to logger
-            return response.json() 
-        except requests.RequestException as e:
-            logging.error(f"Error featching {endpoint}: {e}") # logs the error message
-            raise # interrupts program flow to signal error 
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, params=params, timeout=10)
+                response.raise_for_status() # checks HTTP status code of a response and raises HTTPError if the status is 4xx or 5xx
+                logging.info(f"Successfully fetched {endpoint}") # log info message to logger
+                return response.json() 
+            except requests.RequestException as e:
+                logging.error(f"Error fetching {endpoint}: {e}") # logs the error message
+                if attempt < max_retries - 1:
+                    time.sleep(2**attempt) #1s, then 2s before final attempt
+                else:
+                    raise # interrupts program flow to signal error 
     
     def get_popular_movies(self, page: int = 1) -> List[Dict]:
         """Get popular movies"""
@@ -78,7 +86,7 @@ class TMDBCollector():
         """Get detailed movie information"""
         return self._make_request(f'movie/{movie_id}')
     
-    def get_movie_creditss(self, movie_id: int) -> Dict:
+    def get_movie_credits(self, movie_id: int) -> Dict:
         """Get movie cast and crew information"""
         return self._make_request(f'movie/{movie_id}/credits')
     
@@ -103,7 +111,7 @@ class TMDBCollector():
 
                 try:
                     movie_details = self.get_movie_details(movie_id=movie_id)
-                    movie_creds = self.get_movie_creditss(movie_id=movie_id)
+                    movie_creds = self.get_movie_credits(movie_id=movie_id)
 
                     movie_data = {
                         'name': movie,
@@ -119,7 +127,16 @@ class TMDBCollector():
                     continue
 
             page_count += 1
-            
+
+        #Save data to JSON file
+        filepath = os.path.join('data', 'tmdb_movie_data.json')
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(movies, f, indent=4)
+            logging.info(f'Saved scraped data to {filepath}')
+        except Exception as e:
+            logging.error(f'Error saving data to JSON: {e}')  
+
         return movies
 
 
