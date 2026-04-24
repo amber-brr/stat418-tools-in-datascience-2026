@@ -24,18 +24,18 @@ from typing import Dict
 class DataAnalyzer:
     def __init__(self):
         os.makedirs('logs', exist_ok=True)
-        os.makedirs('data', exist_ok=True)
-        os.makedirs('outputs', exist_ok=True)
+        os.makedirs(os.path.join('data', 'processed'), exist_ok=True)
+        os.makedirs(os.path.join('data', 'analysis'), exist_ok=True)
 
         logging.basicConfig(
-            filename='logs/analyze_data.log',
+            filename=os.path.join('logs', 'pipeline.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
 
     def load_processed_data(self) -> pd.DataFrame:
         """Load processed movie data from CSV"""
-        filepath = os.path.join('data', 'processed_movies.csv')
+        filepath = os.path.join('data', 'processed', 'processed_movies.csv')
         try:
             df = pd.read_csv(filepath)
             logging.info(f'Loaded processed data: {len(df)} records')
@@ -182,7 +182,7 @@ class DataAnalyzer:
             axes[1].set_ylabel('Count')
 
         plt.tight_layout()
-        path = os.path.join('outputs', 'rating_distributions.png')
+        path = os.path.join('data', 'analysis','rating_distributions.png')
         try:
             plt.savefig(path)
             logging.info(f'Saved rating distribution visualization: {path}')
@@ -198,7 +198,7 @@ class DataAnalyzer:
             plt.xlabel('TMDB Rating')
             plt.ylabel('IMDb Rating')
             plt.title('TMDB vs IMDb Rating Correlation')
-            path = os.path.join('outputs', 'rating_correlation.png')
+            path = os.path.join('data', 'analysis','rating_correlation.png')
             try:
                 plt.savefig(path)
                 logging.info(f'Saved visualization: {path}')
@@ -217,7 +217,7 @@ class DataAnalyzer:
             plt.ylabel('Number of Movies')
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
-            path = os.path.join('outputs', 'genre_distribution.png')
+            path = os.path.join('data', 'analysis','genre_distribution.png')
             try:
                 plt.savefig(path)
                 logging.info(f'Saved visualization: {path}')
@@ -240,7 +240,7 @@ class DataAnalyzer:
             plt.ylabel('Average Rating')
             plt.legend()
             plt.tight_layout()
-            path = os.path.join('outputs', 'ratings_by_year.png')
+            path = os.path.join('data', 'analysis','ratings_by_year.png')
             try:
                 plt.savefig(path)
                 logging.info(f'Saved visualization: {path}')
@@ -309,7 +309,7 @@ class DataAnalyzer:
                 best_yr_imdb = max(imdb_by_yr, key=imdb_by_yr.get)
                 lines.append(f"Highest rated year (IMDb avg): {best_yr_imdb} ({imdb_by_yr[best_yr_imdb]})")
 
-        report_path = os.path.join('outputs', 'summary_report.txt')
+        report_path = os.path.join('data', 'analysis','summary_report.txt')
         try:
             with open(report_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines))

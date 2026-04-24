@@ -37,10 +37,10 @@ class IMDbScraper:
         self.can_scrape = False
 
         os.makedirs('logs', exist_ok=True)
-        os.makedirs('data', exist_ok=True)
+        os.makedirs(os.path.join('data', 'raw', 'imdb'), exist_ok=True)
 
         logging.basicConfig(
-            filename='logs/web_scraper.log',
+            filename=os.path.join('logs', 'pipeline.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
@@ -128,7 +128,7 @@ class IMDbScraper:
                 scraped_movies.append({'imdb_id':imdb_id, 'error':str(e)})
         
         #Save scraped data to JSON file
-        filepath = os.path.join('data', 'imdb_scraped_data.json')
+        filepath = os.path.join('data', 'raw', 'imdb', 'imdb_scraped_data.json')
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(scraped_movies, f, indent=4)

@@ -37,10 +37,10 @@ class TMDBCollector():
         self.main_request_interval = 0.25 # 4 requests per second
         
         os.makedirs('logs', exist_ok=True)
-        os.makedirs('data', exist_ok=True)
-        
+        os.makedirs(os.path.join('data', 'raw', 'tmdb'), exist_ok=True)
+
         logging.basicConfig(
-            filename='logs/api_collector.log',
+            filename=os.path.join('logs', 'pipeline.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
@@ -129,7 +129,7 @@ class TMDBCollector():
             page_count += 1
 
         #Save data to JSON file
-        filepath = os.path.join('data', 'tmdb_movie_data.json')
+        filepath = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(movies, f, indent=4)

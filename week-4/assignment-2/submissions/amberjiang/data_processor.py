@@ -25,10 +25,12 @@ from typing import Dict, List, Tuple
 class DataProcessor:
     def __init__(self):
         os.makedirs('logs', exist_ok=True)
-        os.makedirs('data', exist_ok=True)
+        os.makedirs(os.path.join('data', 'raw', 'tmdb'), exist_ok=True)
+        os.makedirs(os.path.join('data', 'raw', 'imdb'), exist_ok=True)
+        os.makedirs(os.path.join('data', 'processed'), exist_ok=True)
 
         logging.basicConfig(
-            filename='logs/data_processor.log',
+            filename=os.path.join('logs', 'pipeline.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
@@ -36,8 +38,8 @@ class DataProcessor:
     def load_raw_data(self) -> Tuple[List[Dict], List[Dict]]:
         """Load raw TMDB and IMDb data from JSON files"""
 
-        tmdb_path = os.path.join('data', 'tmdb_movie_data.json')
-        imdb_path = os.path.join('data', 'imdb_scraped_data.json')
+        tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')
+        imdb_path = os.path.join('data', 'raw', 'imdb', 'imdb_scraped_data.json')
 
         #Load data from TMDB 
         try:
@@ -137,7 +139,7 @@ class DataProcessor:
         logging.info(f'Cleaned and validated data: {len(df)} records remaining')
         return df
         
-    def save_processed_data(self, df: pd.DataFrame, output_dir: str):
+    def save_processed_data(self, df: pd.DataFrame, output_dir: str = os.path.join('data', 'processed')):
         """Save processed data as CSV and JSON"""
         os.makedirs(output_dir, exist_ok=True)
 
