@@ -30,7 +30,7 @@ class IMDbScraper:
         self.delay = delay
         self.session = requests.Session() # create a Session object to persist TCP connection, cookies, config across requests
         self.last_request_time = 0
-        self.main_request_interval = max(delay, 2.0) # ensure minimum 2 seconds between requests 
+        self.main_request_interval = max(delay, 2.0) # ensure minimum 2 seconds between requests
         self.session.headers.update({
             'User-Agent': 'UCLA STAT418 Student - amberjiang@g.ucla.edu'
         })
@@ -46,13 +46,13 @@ class IMDbScraper:
         )
     def _rate_limit(self):
         """Ensure rate limits are not exceeded"""
-        elapsed = time.time() - self.last_request_time # time between current and last request time 
-        if elapsed < self.main_request_interval: # if the elapsed time is less than the main request interval 
+        elapsed = time.time() - self.last_request_time # time between current and last request time
+        if elapsed < self.main_request_interval: # if the elapsed time is less than the main request interval
             time.sleep(self.main_request_interval - elapsed) # sleep for the rest of the time until the main request interval time
         self.last_request_time = time.time() # set the last request time to now
-    
+
     def check_robots_txt(self) -> bool:
-        """Check robots_txt to see whether IMDb allows scraping movie title pages""" 
+        """Check robots_txt to see whether IMDb allows scraping movie title pages"""
         try:
             rp = RobotFileParser()
             robots_url = 'https://www.imdb.com/robots.txt'
@@ -72,7 +72,7 @@ class IMDbScraper:
 
     def scrape_movie_page(self, imdb_id: str) -> Dict:
         """Scrape IMDb movie page"""
-        
+
         #Check robots.txt
         if not self.can_scrape:
             if not self.check_robots_txt():
@@ -86,7 +86,7 @@ class IMDbScraper:
         url = f'https://www.imdb.com/title/{imdb_id}/'
 
         try:
-            response = self.session.get(url, timeout=10) 
+            response = self.session.get(url, timeout=10)
             # timeout in case the server is not responding in a timely manner; without, code may hang for awhile
             # connect timeout = 10 -> number of seconds Requests will wait for client to establish a connection to remote machine
             # read timeout = 10 -> number of seconds the client will wait for the server to send a response
@@ -126,7 +126,7 @@ class IMDbScraper:
             except Exception as e:
                 logging.error(f'Error scraping {imdb_id}: {e}')
                 scraped_movies.append({'imdb_id':imdb_id, 'error':str(e)})
-        
+
         #Save scraped data to JSON file
         filepath = os.path.join('data', 'raw', 'imdb', 'imdb_scraped_data.json')
         try:
@@ -139,16 +139,16 @@ class IMDbScraper:
         return scraped_movies
 
 if __name__ == '__main__':
-    tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')                                                                                                               
-    try:                                                                                                                                                                                  
-        with open(tmdb_path, 'r', encoding='utf-8') as f:                                                                                                                                 
-            tmdb_data = json.load(f)                                                                                                                                                      
-        tmdb_ids = [                                                                                                                                                                      
-            movie.get('details', {}).get('id')                                                                                                                                            
-            for movie in tmdb_data                                                                                                                                                        
-            if movie.get('details', {}).get('id')                                                                                                                                         
-          ]                                                                                                                                                                                 
-    except Exception as e:                                                                                                                                                                
-        print(f'Error loading TMDB data: {e}. Run api_collector.py first.')                                                                                                               
-        tmdb_ids = []                                                                                                                                                                     
-    IMDbScraper().scrape_multiple_movies(tmdb_ids)   
+    tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')
+    try:
+        with open(tmdb_path, 'r', encoding='utf-8') as f:
+            tmdb_data = json.load(f)
+        imdb_ids = [
+            movie.get('details', {}).get('imdb_id')
+            for movie in tmdb_data
+            if movie.get('details', {}).get('imdb_id')
+        ]
+    except Exception as e:
+        print(f'Error loading TMDB data: {e}. Run api_collector.py first.')
+        imdb_ids = []
+    IMDbScraper().scrape_multiple_movies(imdb_ids)
