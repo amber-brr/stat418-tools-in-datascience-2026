@@ -1,25 +1,30 @@
 '''
 analyze_data.py - analysis
 
-1. Rating Analysis:
-    What's the correlation between TMDB and IMDb ratings?
-    Distribution of ratings on each platform
-2. Genre Analysis:
-    Most common genres
-    Average ratings by genre
-3. Temporal Analysis:
-    Rating trends over time
-    Most productive years
+1. Loads processed movie data from CSV
+2. Conducts rating analysis (correlation/distribution)
+3. Conducts genre analysis (most common genres and average ratings by genre)
+4. Conducts temporal analysis (rating trends and most productive years)
+5. Generate 4 visualizations 
+6. Generate summary report 
 
-Generate at least 3 visualizations and a summary report with interesting insights or patterns.
+Key Functions:
+def load_processed_data() -> pd.DataFrame
+def rating_analysis(df) -> List[Dict]
+def genre_analysis(df) -> List[Dict]
+def temporal_analysis(df) -> List[Dict]
+def generate_visualizations(df: pd.DataFrame)
+def generate_summary(rating_results: Dict, genre_results: Dict, temporal_results: Dict)
+def run_pipeline()
 '''
 
 import pandas as pd
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import logging
-from typing import Dict
+from typing import Dict, List
 
 class DataAnalyzer:
     def __init__(self):
@@ -44,7 +49,7 @@ class DataAnalyzer:
             logging.error(f'Error loading processed data: {e}')
             return pd.DataFrame()
         
-    def rating_analysis(self, df):
+    def rating_analysis(self, df) -> Dict:
         """Analyze correlation and distribution between TMDB and IMDb ratings"""
         results = {}
 
@@ -71,7 +76,7 @@ class DataAnalyzer:
             logging.error(f'Error analyzing ratings: {e}')
             return results
     
-    def genre_analysis(self, df):
+    def genre_analysis(self, df) -> Dict:
         """Analyze most common genres and average ratings by genre"""
         results = {}
 
@@ -127,7 +132,7 @@ class DataAnalyzer:
             logging.error(f'Error analyzing average rating by genre: {e}')
             return results
 
-    def temporal_analysis(self, df):
+    def temporal_analysis(self, df) -> List[Dict]:
         """Analyze rating trends over time and most productive years"""
         results = {}
 
@@ -317,19 +322,21 @@ class DataAnalyzer:
         except Exception as e:
             logging.error(f'Error saving summary report: {e}')
 
-    def run_pipeline(self):
-        """Run full data analysis pipeline"""
-        df = self.load_processed_data() #load processed data
+    def run_analysis(self, num_items: int = 50):
+        """Run data analysis pipeline"""
+        df = self.load_processed_data()
         if df.empty:
             logging.error('No data loaded to analyze, interrupting pipeline run')
             return
-        
+
         rating_results = self.rating_analysis(df)
         genre_results = self.genre_analysis(df)
         temporal_results = self.temporal_analysis(df)
 
         self.generate_visualizations(df)
-        self.generate_summary(rating_results,genre_results,temporal_results)
+        self.generate_summary(rating_results, genre_results, temporal_results)
 
-        logging.info('Analysis completed successfully')
+        logging.info('Pipeline completed successfully')
 
+if __name__ == '__main__':                                                                                                                                                                      
+    DataAnalyzer().run_analysis()     

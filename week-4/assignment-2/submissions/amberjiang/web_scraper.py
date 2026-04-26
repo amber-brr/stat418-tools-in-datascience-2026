@@ -137,3 +137,18 @@ class IMDbScraper:
             logging.error(f'Error saving data to JSON: {e}')
 
         return scraped_movies
+
+if __name__ == '__main__':
+    tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')                                                                                                               
+    try:                                                                                                                                                                                  
+        with open(tmdb_path, 'r', encoding='utf-8') as f:                                                                                                                                 
+            tmdb_data = json.load(f)                                                                                                                                                      
+        tmdb_ids = [                                                                                                                                                                      
+            movie.get('details', {}).get('id')                                                                                                                                            
+            for movie in tmdb_data                                                                                                                                                        
+            if movie.get('details', {}).get('id')                                                                                                                                         
+          ]                                                                                                                                                                                 
+    except Exception as e:                                                                                                                                                                
+        print(f'Error loading TMDB data: {e}. Run api_collector.py first.')                                                                                                               
+        tmdb_ids = []                                                                                                                                                                     
+    IMDbScraper().scrape_multiple_movies(tmdb_ids)   

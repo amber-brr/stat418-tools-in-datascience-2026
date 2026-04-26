@@ -125,9 +125,9 @@ class DataProcessor:
         #Handle missing values
         df['budget'] = df['budget'].replace(0, None)
         df['revenue'] = df['revenue'].replace(0, None)
-        df['director'].fillna('Unknown', inplace=True)                                                                                                                                
-        df['overview'].fillna('', inplace=True)       
-        df['top_cast'].fillna('', inplace=True)
+        df['director'] = df['director'].fillna('Unknown')
+        df['overview'] = df['overview'].fillna('')
+        df['top_cast'] = df['top_cast'].fillna('')
 
         #Rename vote count
         if 'num_reviews' in df.columns:
@@ -160,3 +160,10 @@ class DataProcessor:
             logging.info(f'Saved processed data to {json_path}: {len(df)} records')
         except Exception as e:
             logging.error(f'Error saving to JSON: {e}')
+
+if __name__ == '__main__':                                                                                                                                                                      
+    processor = DataProcessor()
+    tmdb_data, imdb_data = processor.load_raw_data()
+    df = processor.merge_data(tmdb_data=tmdb_data, imdb_data=imdb_data)
+    cleaned_df = processor.clean_data(df=df)                                                                                                                                                    
+    processor.save_processed_data(df=cleaned_df)

@@ -139,4 +139,6 @@ class TMDBCollector():
 
         return movies
 
+if __name__ == '__main__':                                                                                                                                                                      
+    TMDBCollector().collect_all_data(num_items=50)
 
