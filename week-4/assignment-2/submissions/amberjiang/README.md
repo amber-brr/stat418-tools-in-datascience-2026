@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build a data collection pipeline that combines API integration and web scraping to gather movie and TV show data. Data is collected from The Movie Database (TMDB) API and additional information from IMDb is scraped to analyze trends in the entertainment industry.
+Build a data collection pipeline that combines API integration and web scraping to gather movie and TV show data. You'll collect data from The Movie Database (TMDB) API and scrape additional information from Letterboxd, then analyze trends in the entertainment industry.
 
 ## Description
 
@@ -17,10 +17,9 @@ Collected data for **at least 50 movies or TV shows** including:
 - Production companies
 - Original language
 
-**From IMDb (via scraping):**
-- IMDb rating
-- Number of user reviews
-- Metascore (if available)
+**From Letterboxd (via scraping):**
+- Average rating (out of 5 stars)
+- Number of fans
 
 ### Part 1: API Integration
 
@@ -66,7 +65,7 @@ def scrape_multiple_movies(imdb_ids: List[str]) -> List[Dict]
 
 `data_processor.py`:
 1. Loads data from both sources
-2. Merges data on common identifiers (IMDb ID)
+2. Merges data on common identifiers (movie title and year)
 3. Cleans and validates data
 4. Handles missing values appropriately
 5. Standardizes formats (dates, ratings)
@@ -87,8 +86,8 @@ def save_processed_data(df: pd.DataFrame, output_dir: str)
 
 Answers: 
 1. **Rating Analysis:**
-   - What's the correlation between TMDB and IMDb ratings?
-   - Distribution of ratings on each platform
+   - What's the correlation between TMDB and Letterboxd ratings?
+   - Distribution of ratings on each platform (note: TMDB uses 0-10 scale, Letterboxd uses 0-5 scale)
 
 2. **Genre Analysis:**
    - Most common genres
@@ -136,7 +135,7 @@ TMDB_API_KEY=your_tmdb_api_key_here
 python api_collector.py  
 ```
 
-2. Scrape IMDb ratings -> data/raw/imdb/imdb_scraped_data.json
+2. Scrape letterboxd ratings -> data/raw/imdb/letterboxd_scraped_data.json
 ```bash
 python web_scraper.py        
 ```
@@ -176,17 +175,15 @@ uv pip install -r requirements.txt
 - Rate-limited to 4 requests/second (well within TMDB's 40 requests/10 seconds limit)
 - Saves raw responses to `data/raw/tmdb/tmdb_movie_data.json`
 
-**IMDb web scraping (`web_scraper.py`):**
+**Letterboxd web scraping (`web_scraper.py`):**
 - Checks `robots.txt` before any scraping
-- Resolves IMDb IDs from `tmdb_movie_data.json` (TMDB movie details include `imdb_id`)
-- Scrapes each movie's IMDb title page (`https://www.imdb.com/title/{imdb_id}/`)
-- Extracts IMDb rating and review count from `application/ld+json` structured data; metascore from the embedded `__NEXT_DATA__` JSON
+- ...
 - Rate-limited to a minimum of 2 seconds between requests
-- Saves scraped records to `data/raw/imdb/imdb_scraped_data.json`
+- Saves scraped records to `data/raw/imdb/letterboxd_scraped_data.json`
 
 #### **Ethical considerations:**
 **Did:**
-- ✅ Check robots.txt before scraping IMDb
+- ✅ Check robots.txt before scraping Letterboxd
 - ✅ Implement rate limiting (2+ seconds between requests)
 - ✅ Use descriptive User-Agent: "UCLA STAT418 Student - amberjiang@g.ucla.edu"
 - ✅ Respect TMDB API rate limits (40 requests per 10 seconds)
@@ -202,12 +199,7 @@ uv pip install -r requirements.txt
 
 #### **Known limitations:**
 
-- **IMDb scraping fragility:** IMDb rating and metascore extraction depends on the structure of embedded JSON (`ld+json` and `__NEXT_DATA__`). If IMDb changes their page layout, the parser will silently return `None` for those fields.
-- **robots.txt blocking:** IMDb's `robots.txt` may disallow scraping for the User-Agent used. If so, all IMDb records will be skipped and the merged dataset will have no IMDb ratings.
-- **Missing budget/revenue:** TMDB reports budget and revenue as `0` for movies where this data is not public; these are treated as missing values during processing.
-- **Metascore availability:** Metascore is only present for a subset of movies on IMDb; expect a high proportion of `None` values in that column.
-- **Popularity bias:** Data is sourced from TMDB's "popular" endpoint, so the dataset reflects currently trending movies rather than a broad or historical sample.
-- **No TV show support:** The pipeline is scoped to movies only; extending to TV shows would require separate TMDB endpoints and different IMDb page structures.
+- ...
 
 #### **REPORT.md**
 1. Data collection summary (how much data, from where)
