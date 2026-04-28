@@ -2,11 +2,11 @@
 analyze_data.py - analysis
 
 1. Loads processed movie data from CSV
-2. Conducts rating analysis (correlation/distribution)
+2. Conducts rating analysis (correlation/distribution between TMDB and Letterboxd)
 3. Conducts genre analysis (most common genres and average ratings by genre)
 4. Conducts temporal analysis (rating trends and most productive years)
-5. Generate 4 visualizations 
-6. Generate summary report 
+5. Generate 4 visualizations
+6. Generate summary report
 
 Key Functions:
 def load_processed_data() -> pd.DataFrame
@@ -33,7 +33,7 @@ class DataAnalyzer:
         os.makedirs(os.path.join('data', 'analysis'), exist_ok=True)
 
         logging.basicConfig(
-            filename=os.path.join('logs', 'pipeline.log'),
+            filename=os.path.join('logs', 'analyze_data.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
@@ -50,27 +50,27 @@ class DataAnalyzer:
             return pd.DataFrame()
         
     def rating_analysis(self, df) -> Dict:
-        """Analyze correlation and distribution between TMDB and IMDb ratings"""
+        """Analyze correlation and distribution between TMDB and Letterboxd ratings"""
         results = {}
 
-        if 'tmdb_rating' not in df.columns or 'imdb_rating' not in df.columns:
+        if 'tmdb_rating' not in df.columns or 'letterboxd_rating' not in df.columns:
             logging.warning('Rating columns missing, skipping rating analysis')
             return results
-        
+
         dist_df = df.copy()
         try:
             #Analyze correlation
-            corr = dist_df['tmdb_rating'].corr(dist_df['imdb_rating'])
+            corr = dist_df['tmdb_rating'].corr(dist_df['letterboxd_rating'])
             results['correlation'] = round(corr,3)
 
-            #Analyze distribution by statistical values 
+            #Analyze distribution by statistical values
             stat_labels = dist_df['tmdb_rating'].describe().index.tolist()
             tmdb_stats = dist_df['tmdb_rating'].describe().values.tolist()
-            imdb_stats = dist_df['imdb_rating'].describe().values.tolist()
+            letterboxd_stats = dist_df['letterboxd_rating'].describe().values.tolist()
             for i, stat in enumerate(stat_labels):
                 results[f'tmdb_{stat}'] = round(tmdb_stats[i],3)
-                results[f'imdb_{stat}'] = round(imdb_stats[i],3)
-            logging.info(f'Successfully analyzed TMDB vs IMDb distributions: r={corr:.3f}.')
+                results[f'letterboxd_{stat}'] = round(letterboxd_stats[i],3)
+            logging.info(f'Successfully analyzed TMDB vs Letterboxd distributions: r={corr:.3f}.')
             return results
         except Exception as e:
             logging.error(f'Error analyzing ratings: {e}')
@@ -118,14 +118,14 @@ class DataAnalyzer:
             return results
         
         #Analyze average ratings by genre
-        if 'tmdb_rating' not in df.columns or 'imdb_rating' not in df.columns:
+        if 'tmdb_rating' not in df.columns or 'letterboxd_rating' not in df.columns:
             logging.warning('Rating columns missing, skipping average ratings by genre analysis')
             return results
         try:
             tmdb_ave = genre_df.groupby('genre_name')['tmdb_rating'].mean().sort_values(ascending=False)
-            imdb_ave = genre_df.groupby('genre_name')['imdb_rating'].mean().sort_values(ascending=False)
+            letterboxd_ave = genre_df.groupby('genre_name')['letterboxd_rating'].mean().sort_values(ascending=False)
             results['avg_tmdb_by_genre'] = tmdb_ave.round(3).to_dict()
-            results['avg_imdb_by_genre'] = imdb_ave.round(3).to_dict()
+            results['avg_letterboxd_by_genre'] = letterboxd_ave.round(3).to_dict()
             logging.info(f'Successfully analyzed average ratings by genre')
             return results
         except Exception as e:
@@ -136,31 +136,30 @@ class DataAnalyzer:
         """Analyze rating trends over time and most productive years"""
         results = {}
 
-        if 'release_date' not in df.columns:
-            logging.warning('Release date column missing, skipping temporal analysis')
+        if 'release_year' not in df.columns:
+            logging.warning('Release year column missing, skipping temporal analysis')
             return results
-        
+
         temp_df = df.copy()
 
-        #Clean release_date column
+        #Filter to rows with a valid release year
         try:
-            temp_df['release_date'] = pd.to_datetime(temp_df['release_date'], errors='coerce')
-            temp_df['year'] = temp_df['release_date'].dt.year
-            temp_df = temp_df[temp_df['year'].notna()]
+            temp_df = temp_df[temp_df['release_year'].notna()]
+            temp_df['release_year'] = temp_df['release_year'].astype(int)
         except Exception as e:
-            logging.error(f'Error cleaning release_date column for temporal analysis: {e}')
+            logging.error(f'Error cleaning release_year column for temporal analysis: {e}')
             return results
-        
+
         #Start temporal analysis
-        movies_per_yr = temp_df['year'].value_counts().sort_index()
-        if 'tmdb_rating' not in df.columns or 'imdb_rating' not in df.columns:
+        movies_per_yr = temp_df['release_year'].value_counts().sort_index()
+        if 'tmdb_rating' not in df.columns or 'letterboxd_rating' not in df.columns:
             logging.warning('Rating columns missing, skipping average rating trends analysis')
             return results
         try:
-            tmdb_by_yr = temp_df.groupby('year')['tmdb_rating'].mean().round(3)
-            imdb_by_yr = temp_df.groupby('year')['imdb_rating'].mean().round(3)
+            tmdb_by_yr = temp_df.groupby('release_year')['tmdb_rating'].mean().round(3)
+            letterboxd_by_yr = temp_df.groupby('release_year')['letterboxd_rating'].mean().round(3)
             results['tmdb_rating_by_year'] = tmdb_by_yr.to_dict()
-            results['imdb_rating_by_year'] = imdb_by_yr.to_dict()
+            results['letterboxd_rating_by_year'] = letterboxd_by_yr.to_dict()
             results['most_productive_year'] = int(movies_per_yr.idxmax())
             logging.info(f'Temporal analysis: {len(movies_per_yr)} years covered')
             return results
@@ -177,13 +176,13 @@ class DataAnalyzer:
         if 'tmdb_rating' in df.columns:
             df['tmdb_rating'].dropna().hist(bins=20, ax=axes[0], color='steelblue', edgecolor='white')
             axes[0].set_title('TMDB Rating Distribution')
-            axes[0].set_xlabel('Rating')
+            axes[0].set_xlabel('Rating (0-10)')
             axes[0].set_ylabel('Count')
 
-        if 'imdb_rating' in df.columns:
-            df['imdb_rating'].dropna().hist(bins=20, ax=axes[1], color='goldenrod', edgecolor='white')
-            axes[1].set_title('IMDb Rating Distribution')
-            axes[1].set_xlabel('Rating')
+        if 'letterboxd_rating' in df.columns:
+            df['letterboxd_rating'].dropna().hist(bins=20, ax=axes[1], color='goldenrod', edgecolor='white')
+            axes[1].set_title('Letterboxd Rating Distribution')
+            axes[1].set_xlabel('Rating (0-5)')
             axes[1].set_ylabel('Count')
 
         plt.tight_layout()
@@ -195,14 +194,14 @@ class DataAnalyzer:
             logging.error(f'Error saving {path}: {e}')
         plt.close()
 
-        #Visualization 2: TMDB vs IMDb rating correlation
-        if 'tmdb_rating' in df.columns and 'imdb_rating' in df.columns:
-            scatter_df = df[['tmdb_rating','imdb_rating']].dropna()
+        #Visualization 2: TMDB vs Letterboxd rating correlation
+        if 'tmdb_rating' in df.columns and 'letterboxd_rating' in df.columns:
+            scatter_df = df[['tmdb_rating','letterboxd_rating']].dropna()
             plt.figure(figsize=(8, 6))
-            plt.scatter(scatter_df['tmdb_rating'], scatter_df['imdb_rating'], alpha=0.5, color='steelblue')
-            plt.xlabel('TMDB Rating')
-            plt.ylabel('IMDb Rating')
-            plt.title('TMDB vs IMDb Rating Correlation')
+            plt.scatter(scatter_df['tmdb_rating'], scatter_df['letterboxd_rating'], alpha=0.5, color='steelblue')
+            plt.xlabel('TMDB Rating (0-10)')
+            plt.ylabel('Letterboxd Rating (0-5)')
+            plt.title('TMDB vs Letterboxd Rating Correlation')
             path = os.path.join('data', 'analysis','rating_correlation.png')
             try:
                 plt.savefig(path)
@@ -230,16 +229,16 @@ class DataAnalyzer:
                 logging.error(f'Error saving {path}: {e}')
             plt.close()
 
-        #Visualization 4: average TMDB and IMDb ratings by year
+        #Visualization 4: average TMDB and Letterboxd ratings by year
         temporal_results = self.temporal_analysis(df)
         tmdb_by_yr = temporal_results.get('tmdb_rating_by_year', {})
-        imdb_by_yr = temporal_results.get('imdb_rating_by_year', {})
-        if tmdb_by_yr or imdb_by_yr:
+        letterboxd_by_yr = temporal_results.get('letterboxd_rating_by_year', {})
+        if tmdb_by_yr or letterboxd_by_yr:
             plt.figure(figsize=(12, 5))
             if tmdb_by_yr:
-                plt.plot(list(tmdb_by_yr.keys()), list(tmdb_by_yr.values()), color='steelblue', marker='o', markersize=4, label='TMDB')
-            if imdb_by_yr:
-                plt.plot(list(imdb_by_yr.keys()), list(imdb_by_yr.values()), color='goldenrod', marker='o', markersize=4, label='IMDb')
+                plt.plot(list(tmdb_by_yr.keys()), list(tmdb_by_yr.values()), color='steelblue', marker='o', markersize=4, label='TMDB (0-10)')
+            if letterboxd_by_yr:
+                plt.plot(list(letterboxd_by_yr.keys()), list(letterboxd_by_yr.values()), color='goldenrod', marker='o', markersize=4, label='Letterboxd (0-5)')
             plt.title('Average Ratings by Year')
             plt.xlabel('Year')
             plt.ylabel('Average Rating')
@@ -265,20 +264,12 @@ class DataAnalyzer:
 
         if rating_results:
             lines += [
-                f"TMDB mean rating:      {rating_results.get('tmdb_mean', 'N/A')}",
-                f"IMDb mean rating:      {rating_results.get('imdb_mean', 'N/A')}",
-                f"TMDB std deviation:    {rating_results.get('tmdb_std', 'N/A')}",
-                f"IMDb std deviation:    {rating_results.get('imdb_std', 'N/A')}",
-                f"TMDB-IMDb correlation: {rating_results.get('correlation', 'N/A')}",
+                f"TMDB mean rating:            {rating_results.get('tmdb_mean', 'N/A')}",
+                f"Letterboxd mean rating:      {rating_results.get('letterboxd_mean', 'N/A')}",
+                f"TMDB std deviation:          {rating_results.get('tmdb_std', 'N/A')}",
+                f"Letterboxd std deviation:    {rating_results.get('letterboxd_std', 'N/A')}",
+                f"TMDB-Letterboxd correlation: {rating_results.get('correlation', 'N/A')}",
             ]
-            corr = rating_results.get('correlation')
-            if corr is not None:
-                if corr > 0.7:
-                    lines.append('TMDB and IMDb ratings are strongly correlated — both platforms rate movies similarly.')
-                elif corr > 0.4:
-                    lines.append('TMDB and IMDb ratings show moderate correlation — some divergence exists between platforms.')
-                else:
-                    lines.append('TMDB and IMDb ratings are weakly correlated — the platforms differ significantly in their ratings.')
 
         lines += ['', '--- Genre Analysis ---']
 
@@ -294,10 +285,10 @@ class DataAnalyzer:
             if avg_tmdb:
                 top_rated = list(avg_tmdb.keys())[0]
                 lines.append(f"Highest rated genre (TMDB avg): {top_rated} ({avg_tmdb[top_rated]})")
-            avg_imdb = genre_results.get('avg_imdb_by_genre', {})
-            if avg_imdb:
-                top_rated_imdb = list(avg_imdb.keys())[0]
-                lines.append(f"Highest rated genre (IMDb avg): {top_rated_imdb} ({avg_imdb[top_rated_imdb]})")
+            avg_letterboxd = genre_results.get('avg_letterboxd_by_genre', {})
+            if avg_letterboxd:
+                top_rated_letterboxd = list(avg_letterboxd.keys())[0]
+                lines.append(f"Highest rated genre (Letterboxd avg): {top_rated_letterboxd} ({avg_letterboxd[top_rated_letterboxd]})")
 
         lines += ['', '--- Temporal Analysis ---']
 
@@ -309,10 +300,10 @@ class DataAnalyzer:
             if tmdb_by_yr:
                 best_yr = max(tmdb_by_yr, key=tmdb_by_yr.get)
                 lines.append(f"Highest rated year (TMDB avg): {best_yr} ({tmdb_by_yr[best_yr]})")
-            imdb_by_yr = temporal_results.get('imdb_rating_by_year', {})
-            if imdb_by_yr:
-                best_yr_imdb = max(imdb_by_yr, key=imdb_by_yr.get)
-                lines.append(f"Highest rated year (IMDb avg): {best_yr_imdb} ({imdb_by_yr[best_yr_imdb]})")
+            letterboxd_by_yr = temporal_results.get('letterboxd_rating_by_year', {})
+            if letterboxd_by_yr:
+                best_yr_letterboxd = max(letterboxd_by_yr, key=letterboxd_by_yr.get)
+                lines.append(f"Highest rated year (Letterboxd avg): {best_yr_letterboxd} ({letterboxd_by_yr[best_yr_letterboxd]})")
 
         report_path = os.path.join('data', 'analysis','summary_report.txt')
         try:

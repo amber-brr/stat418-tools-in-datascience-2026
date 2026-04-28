@@ -1,8 +1,8 @@
 '''
 web_scraper.py - web scraping
 
-1. Checks IMDb's robots.txt
-2. Scrapes movie pages for ratings and review counts
+1. Checks Letterboxd's robots.txt
+2. Scrapes movie pages for ratings and fan counts
 3. Implements rate limiting (minimum 2 seconds between requests)
 4. Uses appropriate User-Agent header
 5. Handles missing data gracefully
@@ -11,144 +11,180 @@ web_scraper.py - web scraping
 
 Key Functions:
 def check_robots_txt() -> bool
-def scrape_movie_page(imdb_id: str) -> Dict
-def scrape_multiple_movies(imdb_ids: List[str]) -> List[Dict]
+def scrape_movie_page(movie_title: str, year: int = None) -> Dict
+def scrape_multiple_movies(movies: List[Dict]) -> List[Dict]
 '''
-
 import requests
-import os
-from urllib.robotparser import RobotFileParser
 from bs4 import BeautifulSoup
 import time
+import re
 import json
-from typing import Dict, List
+import os
+from urllib.robotparser import RobotFileParser
+from typing import Dict, List, Optional
 import logging
 
-
-class IMDbScraper:
+class LetterboxdScraper:
     def __init__(self, delay: float = 2.0):
         self.delay = delay
-        self.session = requests.Session() # create a Session object to persist TCP connection, cookies, config across requests
-        self.last_request_time = 0
-        self.main_request_interval = max(delay, 2.0) # ensure minimum 2 seconds between requests
+        self.base_url = 'https://letterboxd.com'
+        self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'UCLA STAT418 Student - amberjiang@g.ucla.edu'
+            'User-Agent': 'UCLA STATS 418 Student - amberjiang@g.ucla.edu'
         })
-        self.can_scrape = False
-
+        
         os.makedirs('logs', exist_ok=True)
-        os.makedirs(os.path.join('data', 'raw', 'imdb'), exist_ok=True)
-
+        os.makedirs(os.path.join('data', 'raw', 'letterboxd'), exist_ok=True)
+        
         logging.basicConfig(
-            filename=os.path.join('logs', 'pipeline.log'),
+            filename=os.path.join('logs', 'web_scraper.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
-    def _rate_limit(self):
-        """Ensure rate limits are not exceeded"""
-        elapsed = time.time() - self.last_request_time # time between current and last request time
-        if elapsed < self.main_request_interval: # if the elapsed time is less than the main request interval
-            time.sleep(self.main_request_interval - elapsed) # sleep for the rest of the time until the main request interval time
-        self.last_request_time = time.time() # set the last request time to now
+    
+    def _slugify_title(self, title: str) -> str:
+        """Convert movie title to URL slug"""
+        slug = title.lower()
+        slug = re.sub(r'[^\w\s]','',slug)
+        slug = re.sub(r'[^a-z0-9]+', '-', slug)
+        slug = slug.strip('-')
+        return slug
+    
+    def scrape_movie_page(self, movie_title: str, year: Optional[int] = None) -> Dict:
+        """Scrape Letterboxd movie page"""
+        time.sleep(self.delay)
+        
+        slug = self._slugify_title(movie_title)
+        url = f'{self.base_url}/film/{slug}/'
+        
+        try:
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Extract data (adjust selectors as needed)
+            data = {
+                'title': movie_title,
+                'year': year,
+                'url': url,
+                'rating': self._extract_rating(soup),
+                'num_fans': self._extract_fan_count(soup),
+                'scraped_successfully': True
+            }
+            
+            logging.info(f"Successfully scraped {movie_title}")
+            return data
+            
+        except Exception as e:
+            logging.error(f"Error scraping {movie_title}: {e}")
+            return {'title': movie_title, 'error': str(e), 'scraped_successfully': False}
+    
+    def _extract_rating(self, soup: BeautifulSoup) -> Optional[float]:
+        """Extract average rating from meta tags"""
+        # Hint: Look for meta tags with name='twitter:data2'
+        # The content will be in format "X.XX out of 5"
+        meta = soup.find('meta', attrs={'name': 'twitter:data2'})
+        if meta:
+            content = meta.get('content', '')
+            match = re.search(r'(\d+\.?\d*)\s+out of\s+5', content)
+            if match:
+                return float(match.group(1))
+        return None
+    
+    def _extract_fan_count(self, soup: BeautifulSoup) -> Optional[int]:
+        """Extract number of fans"""
+        # Hint: Look for links with href containing '/fans/'
+        fans_link = soup.find('a', href=re.compile(r'/fans/'))
+        if fans_link:
+            text = fans_link.get_text(strip=True)
+            # Handle abbreviated numbers like "1.2K" or "5M"
+            for suffix, mult in [('M', 1_000_000), ('K', 1_000)]:
+                match = re.search(r'(\d+\.?\d*)\s*' + suffix, text, re.IGNORECASE)
+                if match:
+                    return int(float(match.group(1)) * mult)
+            numbers = re.sub(r'[^\d]', '', text)
+            if numbers:
+                return int(numbers)
+        return None
+
 
     def check_robots_txt(self) -> bool:
-        """Check robots_txt to see whether IMDb allows scraping movie title pages"""
+        """Check Letterboxd's robots.txt to verify scraping film pages is allowed."""
+        robots_url = "https://letterboxd.com/robots.txt"
+        film_url = "https://letterboxd.com/film/inception/"
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/147.0.0.0 Safari/537.36"
+            )
+        }
+
         try:
+            response = requests.get(robots_url, headers=headers, timeout=10)
+            response.raise_for_status()
+
             rp = RobotFileParser()
-            robots_url = 'https://www.imdb.com/robots.txt'
-            test_url = f'https://www.imdb.com/title/'
-
             rp.set_url(robots_url)
-            rp.read()
+            rp.parse(response.text.splitlines())
 
-            can_fetch = rp.can_fetch(self.session.headers['User-Agent'], test_url)
-            logging.info(f'IMDb robots.txt check result: {can_fetch}')
+            can_fetch = rp.can_fetch(headers["User-Agent"], film_url)
+
+            if can_fetch:
+                logging.info("robots.txt check passed: scraping film pages is allowed")
+            else:
+                logging.warning("robots.txt disallows scraping film pages")
 
             return can_fetch
 
         except Exception as e:
-            logging.error(f'Error checking robots.txt: {e}')
+            logging.error(f"Error checking robots.txt: {e}")
             return False
 
-    def scrape_movie_page(self, imdb_id: str) -> Dict:
-        """Scrape IMDb movie page"""
+    def scrape_multiple_movies(self, movies: List[Dict]) -> List[Dict]:
+        """Scrape multiple Letterboxd movie pages and save results to JSON"""
+        results = []
+        for movie in movies:
+            title = movie.get('title', '')
+            year = movie.get('year')
+            data = self.scrape_movie_page(title, year)
+            results.append(data)
 
-        #Check robots.txt
-        if not self.can_scrape:
-            if not self.check_robots_txt():
-                logging.warning(f'Skipping {imdb_id} because robots.txt disallows scraping')
-                return {'imdb_id': imdb_id, 'error': 'robots.txt disallows scraping'}
-            else:
-                self.can_scrape = True
-
-        self._rate_limit()
-
-        url = f'https://www.imdb.com/title/{imdb_id}/'
-
-        try:
-            response = self.session.get(url, timeout=10)
-            # timeout in case the server is not responding in a timely manner; without, code may hang for awhile
-            # connect timeout = 10 -> number of seconds Requests will wait for client to establish a connection to remote machine
-            # read timeout = 10 -> number of seconds the client will wait for the server to send a response
-
-            response.raise_for_status() # checks HTTP status code of a response and raises HTTPError if the status is 4xx or 5xx
-
-            soup = BeautifulSoup(response.content,'html.parser') # use BeautifulSoup instance to parse HTML content
-
-            rating_data = soup.find('script', type='application/ld+json')
-            rating_json = json.loads(rating_data.string) if rating_data else {}
-            metascore_data = soup.find('script', id='__NEXT_DATA__')
-            metascore_json = json.loads(metascore_data.string) if metascore_data else {}
-
-            #Extract data
-            data = {
-                'imdb_id': imdb_id,
-                'rating': rating_json.get('aggregateRating',{}).get('ratingValue',None),
-                'num_reviews': rating_json.get('aggregateRating', {}).get('ratingCount', None),
-                'metascore': metascore_json.get('props',{}).get('pageProps',{}).get('aboveTheFoldData', {}).get('metacritic', {}).get('metascore', {}).get('score', None)
-            }
-
-            logging.info(f'Successfully scraped {imdb_id}')
-            return data
-
-        except Exception as e:
-            logging.error(f'Error scraping {imdb_id}: {e}')
-            return {'imdb_id':imdb_id, 'error':str(e)}
-
-    def scrape_multiple_movies(self, imdb_ids: List[str]) -> List[Dict]:
-        """Scrape multiple IMDb movie pages"""
-
-        scraped_movies = []
-        for imdb_id in imdb_ids:
-            try:
-                movie_data = self.scrape_movie_page(imdb_id=imdb_id)
-                scraped_movies.append(movie_data)
-            except Exception as e:
-                logging.error(f'Error scraping {imdb_id}: {e}')
-                scraped_movies.append({'imdb_id':imdb_id, 'error':str(e)})
-
-        #Save scraped data to JSON file
-        filepath = os.path.join('data', 'raw', 'imdb', 'imdb_scraped_data.json')
+        os.makedirs(os.path.join('data', 'raw', 'letterboxd'), exist_ok=True)
+        filepath = os.path.join('data', 'raw', 'letterboxd', 'letterboxd_scraped_data.json')
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(scraped_movies, f, indent=4)
-            logging.info(f'Saved scraped data to {filepath}')
+                json.dump(results, f, indent=4)
+            logging.info(f'Saved scraped data to {filepath}: {len(results)} records')
         except Exception as e:
             logging.error(f'Error saving data to JSON: {e}')
 
-        return scraped_movies
+        return results
+
 
 if __name__ == '__main__':
+    scraper = LetterboxdScraper()
+    if not scraper.check_robots_txt():
+        print('Scraping not allowed per robots.txt')
+        exit(1)
+
     tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')
     try:
         with open(tmdb_path, 'r', encoding='utf-8') as f:
             tmdb_data = json.load(f)
-        imdb_ids = [
-            movie.get('details', {}).get('imdb_id')
+        movies = [
+            {
+                'title': movie.get('details', {}).get('title', ''),
+                'year': int(movie.get('details', {}).get('release_date', '')[:4])
+                if movie.get('details', {}).get('release_date') else None
+            }
             for movie in tmdb_data
-            if movie.get('details', {}).get('imdb_id')
+            if movie.get('details', {}).get('title')
         ]
     except Exception as e:
-        print(f'Error loading TMDB data: {e}. Run api_collector.py first.')
-        imdb_ids = []
-    IMDbScraper().scrape_multiple_movies(imdb_ids)
+        print(f'Error loading TMDB data: {e}')
+        exit(1)
+
+    results = scraper.scrape_multiple_movies(movies)
+    print(f'Scraped {len(results)} movies')

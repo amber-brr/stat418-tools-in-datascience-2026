@@ -2,7 +2,7 @@
 data_processor.py - data processing
 
 1. Loads data from both sources
-2. Merges data on common identifiers (IMDb ID)
+2. Merges data on common identifiers (movie title and year)
 3. Cleans and validates data
 4. Handles missing values appropriately
 5. Standardizes formats (dates, ratings)
@@ -11,7 +11,7 @@ data_processor.py - data processing
 
 Key Functions:
 def load_raw_data() -> Tuple[List[Dict], List[Dict]]
-def merge_data(tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame
+def merge_data(tmdb_data: List[Dict], letterboxd_data: List[Dict]) -> pd.DataFrame
 def clean_data(df: pd.DataFrame) -> pd.DataFrame
 def save_processed_data(df: pd.DataFrame, output_dir: str)
 '''
@@ -26,20 +26,20 @@ class DataProcessor:
     def __init__(self):
         os.makedirs('logs', exist_ok=True)
         os.makedirs(os.path.join('data', 'raw', 'tmdb'), exist_ok=True)
-        os.makedirs(os.path.join('data', 'raw', 'imdb'), exist_ok=True)
+        os.makedirs(os.path.join('data', 'raw', 'letterboxd'), exist_ok=True)
         os.makedirs(os.path.join('data', 'processed'), exist_ok=True)
 
         logging.basicConfig(
-            filename=os.path.join('logs', 'pipeline.log'),
+            filename=os.path.join('logs', 'data_processor.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
     
     def load_raw_data(self) -> Tuple[List[Dict], List[Dict]]:
-        """Load raw TMDB and IMDb data from JSON files"""
+        """Load raw TMDB and Letterboxd data from JSON files"""
 
         tmdb_path = os.path.join('data', 'raw', 'tmdb', 'tmdb_movie_data.json')
-        imdb_path = os.path.join('data', 'raw', 'imdb', 'imdb_scraped_data.json')
+        letterboxd_path = os.path.join('data', 'raw', 'letterboxd', 'letterboxd_scraped_data.json')
 
         #Load data from TMDB 
         try:
@@ -50,19 +50,19 @@ class DataProcessor:
             logging.error(f'Error loading TMDB data: {e}')
             tmdb_data = []
         
-        #Load data from IMDb
+        #Load data from Letterboxd
         try:
-            with open(imdb_path, 'r', encoding = 'utf-8') as f:
-                imdb_data = json.load(f)
-            logging.info(f'Successfully loaded IMDb data: {len(imdb_data)} records')
+            with open(letterboxd_path, 'r', encoding = 'utf-8') as f:
+                letterboxd_data = json.load(f)
+            logging.info(f'Successfully loaded Letterboxd data: {len(letterboxd_data)} records')
         except Exception as e:
-            logging.error(f'Error loading IMDb data: {e}')
-            imdb_data = []
+            logging.error(f'Error loading Letterboxd data: {e}')
+            letterboxd_data = []
         
-        return tmdb_data, imdb_data
+        return tmdb_data, letterboxd_data
     
-    def merge_data(self, tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame:
-        """Merge TMDB and IMDb data on IMDb ID"""
+    def merge_data(self, tmdb_data: List[Dict], letterboxd_data: List[Dict]) -> pd.DataFrame:
+        """Merge TMDB and Letterboxd data on title and release year"""
         tmdb_rows = []
         for movie in tmdb_data:
             name = movie.get('name',{})
@@ -71,17 +71,20 @@ class DataProcessor:
 
             crew = credits.get('crew',[])
             director = next((cr.get('name') for cr in crew if cr.get('job') == 'Director'),None)
-            
+
             cast = credits.get('cast', [])
             top_cast = ', '.join(ca.get('name','') for ca in cast[:3])
 
             genres = ', '.join(g.get('name','') for g in details.get('genres',[]))
 
+            release_date = details.get('release_date')
+            release_year = int(release_date[:4]) if release_date and len(release_date) >= 4 else None
+
             row = {
-                'imdb_id': details.get('imdb_id'),
                 'tmdb_id': details.get('id'),
                 'title': details.get('title'),
-                'release_date': details.get('release_date'),
+                'release_year': release_year,
+                'release_date': release_date,
                 'runtime': details.get('runtime'),
                 'tmdb_rating': details.get('vote_average'),
                 'tmdb_vote_count': details.get('vote_count'),
@@ -94,11 +97,12 @@ class DataProcessor:
                 'popularity': details.get('popularity'),
             }
             tmdb_rows.append(row)
-        
+
         tmdb_df = pd.DataFrame(tmdb_rows)
-        imdb_df = pd.DataFrame(imdb_data)
-        merged_df = tmdb_df.merge(imdb_df, on='imdb_id', how='left')
-        logging.info(f'Merged TMDB and IMdb data: {len(merged_df)} records')
+        letterboxd_df = pd.DataFrame(letterboxd_data)
+        letterboxd_df = letterboxd_df.rename(columns={'year': 'release_year'})
+        merged_df = tmdb_df.merge(letterboxd_df, on=['title', 'release_year'], how='left')
+        logging.info(f'Merged TMDB and Letterboxd data: {len(merged_df)} records')
 
         return merged_df
     
@@ -106,12 +110,12 @@ class DataProcessor:
         """Clean and validate merged data"""
         initial_count = len(df)
 
-        #Remove duplicates on imdb_id
-        df = df.drop_duplicates(subset=['imdb_id'])
+        #Remove duplicates on title and release year
+        df = df.drop_duplicates(subset=['title', 'release_year'])
         logging.info(f'Removed {initial_count - len(df)} duplicate records')
 
-        #Drop records with no imdb_id
-        df = df.dropna(subset=['imdb_id'])
+        #Drop records with no title
+        df = df.dropna(subset=['title'])
 
         #Standardize release date to datetime
         df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
@@ -119,8 +123,8 @@ class DataProcessor:
         #Standardize ratings to float
         df['tmdb_rating'] = pd.to_numeric(df['tmdb_rating'], errors='coerce').clip(0,10)
         if 'rating' in df.columns:
-            df = df.rename(columns={'rating': 'imdb_rating'})
-            df['imdb_rating'] = pd.to_numeric(df['imdb_rating'], errors='coerce').clip(0,10)
+            df = df.rename(columns={'rating': 'letterboxd_rating'})
+            df['letterboxd_rating'] = pd.to_numeric(df['letterboxd_rating'], errors='coerce').clip(0,5)
 
         #Handle missing values
         df['budget'] = df['budget'].replace(0, None)
@@ -129,9 +133,14 @@ class DataProcessor:
         df['overview'] = df['overview'].fillna('')
         df['top_cast'] = df['top_cast'].fillna('')
 
-        #Rename vote count
-        if 'num_reviews' in df.columns:
-            df = df.rename(columns={'num_reviews': 'imdb_vote_count'})
+        #Rename fan count
+        if 'num_fans' in df.columns:
+            df = df.rename(columns={'num_fans': 'letterboxd_fans'})
+
+        #Drop rows that failed scraping and remove flag column
+        if 'scraped_successfully' in df.columns:
+            df = df[df['scraped_successfully'] != False]
+            df = df.drop(columns=['scraped_successfully'])
 
         #Ensure numeric runtime
         df['runtime'] = pd.to_numeric(df['runtime'], errors='coerce')
@@ -163,7 +172,7 @@ class DataProcessor:
 
 if __name__ == '__main__':                                                                                                                                                                      
     processor = DataProcessor()
-    tmdb_data, imdb_data = processor.load_raw_data()
-    df = processor.merge_data(tmdb_data=tmdb_data, imdb_data=imdb_data)
+    tmdb_data, letterboxd_data = processor.load_raw_data()
+    df = processor.merge_data(tmdb_data=tmdb_data, letterboxd_data=letterboxd_data)
     cleaned_df = processor.clean_data(df=df)                                                                                                                                                    
     processor.save_processed_data(df=cleaned_df)

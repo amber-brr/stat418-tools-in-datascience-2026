@@ -40,7 +40,7 @@ class TMDBCollector():
         os.makedirs(os.path.join('data', 'raw', 'tmdb'), exist_ok=True)
 
         logging.basicConfig(
-            filename=os.path.join('logs', 'pipeline.log'),
+            filename=os.path.join('logs', 'api_collector.log'),
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
@@ -140,5 +140,5 @@ class TMDBCollector():
         return movies
 
 if __name__ == '__main__':                                                                                                                                                                      
-    TMDBCollector().collect_all_data(num_items=50)
+    TMDBCollector().collect_all_data(num_items=100)
 
