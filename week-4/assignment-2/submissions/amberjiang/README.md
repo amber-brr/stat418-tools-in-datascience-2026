@@ -21,7 +21,41 @@ Collected data for **at least 50 movies or TV shows** including:
 - Average rating (out of 5 stars)
 - Number of fans
 
-### Part 1: API Integration
+
+## Directory Structure
+```
+week-4/assignment-2/submissions/amberjiang/
+├── data/
+│   ├── raw/
+│   │   ├── tmdb/
+│   │   │   └── tmdb_movie_data.json
+│   │   └── letterboxd/
+│   │       └── letterboxd_scraped_data.json
+│   ├── processed/
+│   │   ├── processed_movies.csv
+│   │   └── processed_movies.json
+│   └── analysis/
+│       ├── genre_distribution.png
+│       ├── rating_correlation.png
+│       ├── rating_distributions.png
+│       ├── ratings_by_year.png
+│       └── summary_report.txt
+├── logs/
+│   ├── analyze_data.log
+│   ├── api_collector.log
+│   ├── data_processor.log
+│   └── web_scraper.log
+├── .env.example
+├── README.md
+├── REPORT.md
+├── analyze_data.py
+├── api_collector.py
+├── data_processor.py
+├── requirements.txt
+└── web_scraper.py
+```
+
+## Part 1: API Integration
 
 `api_collector.py` that:
 1. Authenticates with TMDB API
@@ -41,11 +75,11 @@ def get_movie_credits(movie_id: int) -> Dict
 def collect_all_data(num_items: int = 50) -> List[Dict]
 ```
 
-### Part 2: Web Scraping
+## Part 2: Web Scraping
 
 `web_scraper.py` that:
-1. Checks IMDb's robots.txt
-2. Scrapes movie pages for ratings and review counts
+1. Checks Letterboxd's robots.txt
+2. Scrapes movie pages for ratings and fan counts
 3. Implements rate limiting (minimum 2 seconds between requests)
 4. Uses appropriate User-Agent header
 5. Handles missing data gracefully
@@ -55,13 +89,13 @@ def collect_all_data(num_items: int = 50) -> List[Dict]
 **Key Functions:**
 ```python
 def check_robots_txt() -> bool
-def scrape_movie_page(imdb_id: str) -> Dict
-def scrape_multiple_movies(imdb_ids: List[str]) -> List[Dict]
+def scrape_movie_page(movie_title: str, year: int = None) -> Dict
+def scrape_multiple_movies(movies: List[Dict]) -> List[Dict]
 ```
 
-**Note:** Focus on getting basic ratings and counts. Don't worry about extracting review text for this assignment.
+**Note:** Focused on getting basic ratings and counts. 
 
-### Part 3: Data Processing
+## Part 3: Data Processing
 
 `data_processor.py`:
 1. Loads data from both sources
@@ -75,12 +109,12 @@ def scrape_multiple_movies(imdb_ids: List[str]) -> List[Dict]
 **Key Functions:**
 ```python
 def load_raw_data() -> Tuple[List[Dict], List[Dict]]
-def merge_data(tmdb_data: List[Dict], imdb_data: List[Dict]) -> pd.DataFrame
+def merge_data(tmdb_data: List[Dict], letterboxd_data: List[Dict]) -> pd.DataFrame
 def clean_data(df: pd.DataFrame) -> pd.DataFrame
 def save_processed_data(df: pd.DataFrame, output_dir: str)
 ```
 
-### Part 4: Analysis
+## Part 4: Analysis
 
 `analyze_data.py` that:
 
@@ -99,15 +133,15 @@ Answers:
 
 Generates:
 1. **4 Visualizations:** 
-    - TMDB and IMDb distributions side by side
-    - TMDB vs IMDb rating scatter plot
+    - TMDB and Letterboxd rating distributions side by side
+    - TMDB vs Letterboxd rating scatter plot
     - Most common genres bar plot
-    - Average TMDB and IMDb ratings by year line plot
-2: **Summary report of rating, genre, and temporal analysis**
+    - Average TMDB and Letterboxd ratings by year line plot
+2. **Summary report of rating, genre, and temporal analysis**
 
-### Part 5: Documentation
+## Part 5: Documentation
 
-#### **Setup Instructions**
+### Setup Instructions
 
 1. Get TMDB API Key:
     1. Create account at https://www.themoviedb.org/
@@ -128,14 +162,14 @@ TMDB_API_KEY=your_api_key_here
 TMDB_API_KEY=your_tmdb_api_key_here
 ```
 
-#### **How to run the pipeline:**
+### How to run the pipeline:
 
 1. Collect TMDB data -> data/raw/tmdb/tmdb_movie_data
 ```bash
 python api_collector.py  
 ```
 
-2. Scrape letterboxd ratings -> data/raw/imdb/letterboxd_scraped_data.json
+2. Scrape Letterboxd ratings -> data/raw/letterboxd/letterboxd_scraped_data.json
 ```bash
 python web_scraper.py        
 ```
@@ -150,7 +184,7 @@ python data_processor.py
 python analyze_data.py    
 ```
 
-#### **Dependencies and requirements:**
+### Dependencies and requirements:
 `requirements.txt`:
 ```
 requests>=2.31.0
@@ -166,7 +200,7 @@ Install with uv:
 ```bash
 uv pip install -r requirements.txt
 ```
-#### **Data sources and collection methods:**
+### Data sources and collection methods:
 
 **TMDB API (`api_collector.py`):**
 - Authenticates via API key loaded from `.env`
@@ -177,11 +211,13 @@ uv pip install -r requirements.txt
 
 **Letterboxd web scraping (`web_scraper.py`):**
 - Checks `robots.txt` before any scraping
-- ...
+- Derives movie URL slug from TMDB title (e.g. `"The Super Mario Galaxy Movie"` → `/film/the-super-mario-galaxy-movie/`)
+- Extracts average rating (0–5 stars) from `<meta name="twitter:data2">` and fan count from the `/fans/` link
+- Reads movie titles and years from `data/raw/tmdb/tmdb_movie_data.json` so TMDB and Letterboxd records stay aligned
 - Rate-limited to a minimum of 2 seconds between requests
-- Saves scraped records to `data/raw/imdb/letterboxd_scraped_data.json`
+- Saves scraped records to `data/raw/letterboxd/letterboxd_scraped_data.json`
 
-#### **Ethical considerations:**
+### Ethical considerations:
 **Did:**
 - ✅ Check robots.txt before scraping Letterboxd
 - ✅ Implement rate limiting (2+ seconds between requests)
@@ -197,43 +233,22 @@ uv pip install -r requirements.txt
 - ❌ Use data for commercial purposes
 - ❌ Share or sell collected data
 
-#### **Known limitations:**
+### Known limitations:
 
-- ...
+- Title-based URL slug generation can fail for movies with special characters, punctuation, or disambiguation suffixes on Letterboxd (e.g. remakes listed as `/film/title-YYYY/`), resulting in a failed scrape for that title
+- Only popular movies from TMDB's `/movie/popular` endpoint are collected so the dataset is biased toward currently trending films rather than a random sample
+- Letterboxd fan counts may not exist for newer or less popular films and are stored as `None` when not found
+- TMDB budget and revenue fields are often `0` for movies where studios have not disclosed financials, so these are set to `None` in processing
 
-#### **REPORT.md**
+### REPORT.md
 1. Data collection summary (how much data, from where)
 2. Analysis findings with visualizations
 3. Interesting insights or patterns
 4. Challenges encountered and solutions
 5. Limitations and future improvements
 
-## Technical Elements
-
-### Directory Structure
-```
-week-4/assignment-2/submissions/yourname/
-├── README.md
-├── REPORT.md
-├── requirements.txt
-├── .env.example
-├── api_collector.py
-├── web_scraper.py
-├── data_processor.py
-├── analyze_data.py
-├── run_pipeline.py
-├── data/
-│   ├── raw/
-│   │   ├── tmdb/
-│   │   └── imdb/
-│   ├── processed/
-│   └── analysis/
-└── logs/
-    └── pipeline.log
-```
-
-### Code Quality
-- Type hints for function signatures
+### Code Quality Notes
+- Hints for function signatures
 - Docstrings for all functions and classes
 - PEP 8 style guidelines
 - Meaningful variable names
