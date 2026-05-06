@@ -9,6 +9,10 @@ Week 6 is a pivotal week in the course where we transition from learning tools t
 
 This week bridges the gap between data science work and user-facing applications. You'll learn how to take your models and analyses and make them accessible to non-technical users through web applications.
 
+## Slides
+
+- [Week 6 Slides (PDF)](slides-week-6.pdf)
+
 ## Class Structure
 
 ### Part 1: Proposal Presentations (First ~90 minutes)
