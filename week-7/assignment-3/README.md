@@ -1,551 +1,365 @@
-# Assignment 3: Production API Deployment
+# Assignment 3: MTCARS FastAPI Deployment
 
-**Due:** Before Week 9 class at 6:00 PM 
+**Due:** Before Week 9 class at 6:00 PM
 
-**Submission:** Pull request to the course repository
+**Submission:** Pull request to the `assignment-3` branch in the main course repository
 
 ## Overview
 
-Build a complete, production-ready API that serves a machine learning model. You'll create a FastAPI application, containerize it with Podman, deploy it to Google Cloud Run, and implement production best practices including authentication, monitoring, and comprehensive documentation.
+Create a standalone GitHub repository that builds and serves a machine learning model trained on the `mtcars.csv` dataset. Your project must use Python, FastAPI, and Podman. You will train a predictive linear regression model with `mpg` as the response variable and one or more of the remaining variables as predictors, expose the model through an API, containerize it, and deploy it.
+
+This assignment is intentionally specific so that everyone works from the same dataset and the same general deployment stack while still having room for different modeling and implementation choices.
 
 ## Assignment Description
 
-Create a production-ready API that serves a machine learning model (you can use a simple sklearn model like a classifier or regressor trained on any dataset) with:
+Create a standalone GitHub repo for an **MTCARS FastAPI API**. In that repository, you must:
 
-**Core API Features:**
-- Model loading and prediction endpoints
-- Batch prediction support
-- Health and readiness checks
-- Request/response validation with Pydantic
-- Comprehensive error handling
-- API versioning
+1. Use the provided `mtcars.csv` dataset
+2. Train a predictive linear model in Python with:
+   - response variable: `mpg`
+   - predictors: any one or more of the remaining variables
+3. Build a FastAPI application that serves predictions from that model
+4. Run the API locally with Podman
+5. Push your container image to a registry
+6. Deploy the API to Google Cloud Run
+7. Make the repo reproducible so someone can clone it and run it themselves
 
-**Production Features:**
-- Authentication (API key)
-- Rate limiting
-- CORS configuration
-- Logging with request tracking
-- Monitoring and metrics
-- Automatic API documentation
+You may keep the project simple, but it must be complete and reproducible.
 
-**Deployment:**
-- Containerized with Podman (multi-stage Dockerfile)
-- Deployed to Google Cloud Run
-- Environment-based configuration
-- Secrets management
+## Required Dataset
 
-## Requirements
+Use the dataset included with this assignment:
 
-### Part 1: FastAPI Application
+- `week-7/assignment-3/mtcars.csv`
 
-Create `main.py` with your FastAPI application:
+Your standalone repo should also include a copy of `mtcars.csv` so the work is self-contained.
 
-**Required Endpoints:**
+## Required Deliverable Structure in Your Standalone Repo
 
-1. **GET /health** - Health check endpoint
-   - Returns 200 if service is running
-   - No authentication required
+Your standalone GitHub repo should contain, at minimum:
 
-2. **GET /ready** - Readiness check endpoint
-   - Returns 200 if model is loaded and ready
-   - Returns 503 if not ready
-   - No authentication required
-
-3. **POST /v1/predict** - Single prediction endpoint
-   - Requires authentication
-   - Validates input with Pydantic
-   - Returns prediction with confidence score
-   - Includes model version in response
-
-4. **POST /v1/predict/batch** - Batch prediction endpoint
-   - Requires authentication
-   - Accepts multiple instances
-   - Returns array of predictions
-   - Implements batch size limits (max 100)
-
-5. **GET /v1/model/info** - Model metadata endpoint
-   - Returns model version, features, etc.
-   - Requires authentication
-
-**Key Functions:**
-```python
-@app.on_event("startup")
-def load_model():
-    # Load model at startup
-    pass
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-@app.get("/ready")
-def readiness_check():
-    # Check if model is loaded
-    pass
-
-@app.post("/v1/predict", response_model=PredictionResponse)
-def predict(request: PredictionRequest, api_key: str = Depends(verify_api_key)):
-    # Make prediction
-    pass
+```text
+your-mtcars-fastapi-repo/
+├── README.md
+├── mtcars.csv
+├── Dockerfile
+├── .dockerignore
+├── requirements.txt or pyproject.toml
+├── app/
+│   └── main.py
+├── models/
+│   └── model.pkl
+├── notebooks/ or scripts/
+│   └── training workflow
+└── tests/
+    └── test_api.py
 ```
 
-### Part 2: Request/Response Models
+You may organize your repo differently if it is clean and well documented.
 
-Create `models.py` with Pydantic models:
+## Part 1: Modeling Requirements
+
+Train a linear regression model in Python using `mtcars.csv`.
+
+### Minimum modeling requirements
+
+- Load `mtcars.csv`
+- Use `mpg` as the response
+- Use at least 1 predictor variable
+- Train a regression model in Python
+- Save the trained model to disk
+- Clearly document which predictors you used
+
+### Recommended libraries
+
+You may use:
+- `pandas`
+- `scikit-learn`
+- `joblib` or `pickle`
+
+### Suggested workflow
+
+You can train the model in:
+- a notebook, or
+- a Python script
+
+Your repo must make it clear how the model artifact was created.
+
+## Part 2: FastAPI Application
+
+Create a FastAPI application that loads the trained model and serves predictions.
+
+### Required endpoints
+
+1. **GET `/health`**
+   - returns a success response if the API is running
+   - no authentication required
+
+2. **GET `/ready`**
+   - returns a success response if the model is loaded and ready
+   - returns a non-200 response if the model is missing or unavailable
+
+3. **POST `/predict`**
+   - accepts input values for the predictor variables used by your model
+   - validates input with Pydantic
+   - returns the predicted `mpg`
+
+### Example structure
 
 ```python
-from pydantic import BaseModel, Field, validator
-from typing import List, Optional
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
 
 class PredictionRequest(BaseModel):
-    features: List[float] = Field(..., description="Input features")
-    model_version: str = Field(default="v1", description="Model version")
-    
-    @validator('features')
-    def validate_features(cls, v):
-        # Add your validation logic
-        return v
+    wt: float
+    hp: float
 
-class PredictionResponse(BaseModel):
-    prediction: float
-    confidence: float
-    model_version: str
-    request_id: str
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-class BatchPredictionRequest(BaseModel):
-    instances: List[List[float]] = Field(..., max_items=100)
-    
-class BatchPredictionResponse(BaseModel):
-    predictions: List[float]
-    count: int
-    model_version: str
+@app.post("/predict")
+def predict(request: PredictionRequest):
+    return {"predicted_mpg": 21.3}
 ```
 
-### Part 3: Authentication
+## Part 3: Input Validation and Error Handling
 
-Create `auth.py` with authentication logic:
+Your API must include:
 
-```python
-from fastapi import Header, HTTPException
-import os
+- Pydantic request validation
+- helpful errors for invalid input
+- graceful handling if the model cannot be loaded
 
-def verify_api_key(api_key: str = Header(...)):
-    if api_key != os.getenv("API_KEY"):
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return api_key
-```
+At minimum:
+- invalid types should return a validation error
+- missing required predictors should return a validation error
+- missing model file should be handled clearly
 
-### Part 4: Containerization
+## Part 4: Run Locally with Podman
 
-Create a multi-stage `Dockerfile`:
+Your project must run locally in a container with Podman.
 
-```dockerfile
-# Build stage
-FROM python:3.11-slim as builder
+### Required files
 
-WORKDIR /app
+#### `Dockerfile`
+Your Dockerfile must:
+- use a Python base image
+- copy the application code and model artifact
+- install dependencies
+- expose port `8080`
+- start the FastAPI app
 
-# Install uv
-RUN pip install --no-cache-dir uv
+#### `.dockerignore`
+Should exclude unnecessary files such as:
+- `.git`
+- `.venv`
+- `__pycache__`
+- notebook checkpoints
+- secrets
 
-COPY requirements.txt .
-RUN uv pip install --system --no-cache-dir -r requirements.txt
+### Required Podman workflow
 
-# Runtime stage
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser /app
-USER appuser
-
-# Copy installed packages
-COPY --from=builder /root/.local /root/.local
-
-# Copy application
-COPY --chown=appuser:appuser . .
-
-# Set PATH
-ENV PATH=/root/.local/bin:$PATH
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
-
-# Cloud Run sets PORT env var
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
-```
-
-Create `.dockerignore`:
-```
-.git
-.env
-__pycache__
-*.pyc
-.pytest_cache
-.venv
-*.pptx
-*.pdf
-tests/
-docs/
-```
-
-### Part 5: Configuration
-
-Create `config.py`:
-
-```python
-import os
-from pydantic import BaseSettings
-
-class Settings(BaseSettings):
-    api_key: str = os.getenv("API_KEY", "")
-    model_path: str = os.getenv("MODEL_PATH", "model.pkl")
-    log_level: str = os.getenv("LOG_LEVEL", "INFO")
-    max_batch_size: int = int(os.getenv("MAX_BATCH_SIZE", "100"))
-    
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
-```
-
-Create `.env.example`:
-```
-API_KEY=your_api_key_here
-MODEL_PATH=model.pkl
-LOG_LEVEL=INFO
-MAX_BATCH_SIZE=100
-PORT=8080
-```
-
-### Part 6: Deployment to Cloud Run
-
-**Build and push with Podman:**
+Your README must include commands similar to:
 
 ```bash
-# Build image
-podman build -t myapi .
-
-# Test locally
-podman run -p 8080:8080 -e PORT=8080 -e API_KEY=test123 myapi
-
-# Tag for GCR
-podman tag myapi gcr.io/PROJECT_ID/myapi
-
-# Push to GCR
-podman push gcr.io/PROJECT_ID/myapi
+podman build -t mtcars-fastapi .
+podman run --rm -p 8080:8080 mtcars-fastapi
 ```
 
-**Deploy to Cloud Run:**
+You should test locally before deploying.
+
+## Part 5: Deployment
+
+Deploy your containerized API to Google Cloud Run.
+
+Your README must include:
+- how to build the image
+- how to run it locally
+- how to tag and push the image
+- how to deploy it to Cloud Run
+- your deployed API URL
+
+## Part 6: Reproducibility and Documentation
+
+Someone else should be able to:
+- clone your repo
+- install dependencies
+- rebuild your model
+- run your API locally
+- call your API successfully
+- understand what files are doing what
+
+### Your README must include
+
+- project overview
+- description of the model
+- variables used for prediction
+- local setup instructions
+- Podman build and run commands
+- API endpoint documentation
+- example request and response
+- deployment instructions
+- deployed API URL
+- short explanation of repo structure
+
+### Required example API call
+
+Provide at least one working `curl` example in your README.
+
+For example:
 
 ```bash
-gcloud run deploy myapi \
-  --image gcr.io/PROJECT_ID/myapi \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --memory 2Gi \
-  --cpu 2 \
-  --max-instances 10 \
-  --set-env-vars MODEL_PATH=/app/model.pkl \
-  --set-secrets API_KEY=api-key:latest
+curl -X POST "http://localhost:8080/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"wt": 2.62, "hp": 110}'
 ```
 
-### Part 7: Testing
+The response should show a predicted `mpg`.
 
-Create `test_api.py`:
+## Part 7: Testing
 
-```python
-from fastapi.testclient import TestClient
-from main import app
-import pytest
+Include at least one automated API test.
 
-client = TestClient(app)
+Minimum:
+- test `/health`
+- test one successful `/predict` request
 
-def test_health_check():
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json()["status"] == "healthy"
+Recommended:
+- test invalid input
+- test missing field behavior
+- test readiness endpoint
 
-def test_predict_success():
-    response = client.post(
-        "/v1/predict",
-        json={"features": [1.0, 2.0, 3.0]},
-        headers={"api-key": "test123"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "prediction" in data
-    assert "confidence" in data
+## Part 8: Production-Oriented Features
 
-def test_predict_no_auth():
-    response = client.post(
-        "/v1/predict",
-        json={"features": [1.0, 2.0, 3.0]}
-    )
-    assert response.status_code == 403
+Keep the project practical and specific, but include several production-minded features.
 
-def test_predict_invalid_input():
-    response = client.post(
-        "/v1/predict",
-        json={"features": []},
-        headers={"api-key": "test123"}
-    )
-    assert response.status_code == 422
-```
+You should include or clearly discuss as many of the following as make sense for your project:
 
-### Part 8: Documentation
+- health check endpoint
+- readiness check endpoint
+- request/response validation with Pydantic
+- clear error handling
+- automatic FastAPI docs
+- environment-based configuration
+- containerization with Podman
+- deployment documentation
+- tests
+- logging
 
-#### README.md
-Must include:
-- Project overview
-- API endpoints documentation
-- Setup instructions (local and cloud)
-- Authentication instructions
-- Example requests with curl/Python
-- Environment variables
-- Deployment instructions
-- Testing instructions
-
-#### API_DOCUMENTATION.md
-Must include:
-- Detailed endpoint descriptions
-- Request/response schemas
-- Example requests and responses
-- Error codes and meanings
-- Rate limiting information
-- Authentication flow
+You do **not** need to make this artificially complicated. Authentication, rate limiting, and advanced monitoring are welcome but optional.
 
 ## Technical Requirements
 
-### Directory Structure
-```
-week-7/assignment-3/submissions/yourname/
-├── README.md
-├── API_DOCUMENTATION.md
-├── requirements.txt
-├── .env.example
-├── .dockerignore
-├── Dockerfile
-├── main.py
-├── models.py
-├── auth.py
-├── config.py
-├── model.pkl (or your model file)
-├── tests/
-│   └── test_api.py
-└── deployment/
-    ├── deploy.sh
-    └── cloud-run-config.yaml
+### Your standalone repo should include
+
+- FastAPI app
+- trained model artifact
+- model training workflow
+- `mtcars.csv`
+- `Dockerfile`
+- `.dockerignore`
+- dependency file
+- README
+- at least one automated test
+
+### Code quality expectations
+
+- use clear file organization
+- use meaningful variable names
+- include type hints where appropriate
+- write readable, reproducible code
+- keep secrets out of version control
+
+## Submission Instructions
+
+You are submitting **a link to your standalone GitHub repository**, not all project files directly into this course repo.
+
+### Step 1: Create your standalone repo
+
+Create a new GitHub repository with a clear name, for example:
+
+- `mtcars-fastapi-api`
+- `assignment-3-mtcars-fastapi`
+- `mtcars-ml-api`
+
+### Step 2: Build your project in that repo
+
+Make sure the repo includes:
+- your code
+- your model artifact
+- your dataset
+- your documentation
+
+### Step 3: Submit to this course repo
+
+Inside this course repository, create a markdown file in:
+
+```text
+week-7/assignment-3/submissions/
 ```
 
-### Code Quality
-- Use type hints for all function signatures
-- Include docstrings for all functions and classes
-- Follow PEP 8 style guidelines
-- Use meaningful variable names
-- Implement proper error handling
-- Add logging throughout the application
-- Write tests for all endpoints
+Name it:
 
-### Dependencies
-
-Create `requirements.txt`:
-```
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-pydantic>=2.0.0
-python-multipart>=0.0.6
-python-jose[cryptography]>=3.3.0
-slowapi>=0.1.9
-scikit-learn>=1.3.0
-joblib>=1.3.0
-pandas>=2.0.0
-numpy>=1.24.0
-pytest>=7.4.0
-httpx>=0.25.0
+```text
+your-name-hw3.md
 ```
 
-Install with uv:
-```bash
-uv pip install -r requirements.txt
-```
+That markdown file should include:
+- your name
+- assignment title
+- a link to your standalone repo
+- a link to your deployed API
+- a short note about which predictors you used
+
+### Step 4: Open your pull request
+
+Create a pull request:
+- base branch: `assignment-3`
+- compare branch: your feature branch
+- title: `Assignment 3 - Your Name`
 
 ## Deployment Checklist
 
 Before submitting, verify:
 
-- [ ] API runs locally with `uvicorn main:app --reload`
-- [ ] All endpoints work and return correct responses
-- [ ] Authentication is implemented and working
-- [ ] Input validation catches invalid data
-- [ ] Error handling returns appropriate status codes
-- [ ] Health and readiness checks work
-- [ ] Tests pass with `pytest`
-- [ ] Container builds successfully with Podman
-- [ ] Container runs locally
-- [ ] API is deployed to Cloud Run
-- [ ] Deployed API is accessible via HTTPS
-- [ ] Environment variables are set correctly
-- [ ] Secrets are in Secret Manager (not in code)
-- [ ] API documentation is complete
-- [ ] README has clear setup instructions
+- [ ] model trained from `mtcars.csv`
+- [ ] `mpg` used as the response
+- [ ] FastAPI app works locally
+- [ ] `/health` works
+- [ ] `/ready` works
+- [ ] `/predict` works
+- [ ] request validation works
+- [ ] Podman container builds successfully
+- [ ] Podman container runs locally
+- [ ] API deployed to Cloud Run
+- [ ] README is complete
+- [ ] at least one automated test is included
+- [ ] repo is reproducible for another user
 
-## Submission Instructions
+## Suggested Local Workflow
 
-1. **Create a feature branch:**
-   ```bash
-   git checkout -b hw3-yourname
-   ```
+```bash
+# create virtual environment
+uv venv
+source .venv/bin/activate
 
-2. **Create your assignment directory:**
-   ```bash
-   mkdir -p week-7/assignment-3/submissions/yourname
-   cd week-7/assignment-3/submissions/yourname
-   ```
+# install dependencies
+uv pip install -r requirements.txt
 
-3. **Develop your assignment:**
-   - Write code incrementally
-   - Test each component separately
-   - Commit frequently with meaningful messages
+# train your model
+python train_model.py
 
-4. **Required files:**
-   - All Python scripts (main.py, models.py, auth.py, config.py)
-   - README.md with complete documentation
-   - API_DOCUMENTATION.md with endpoint details
-   - requirements.txt
-   - Dockerfile
-   - .dockerignore
-   - .env.example (template for environment variables)
-   - tests/test_api.py
-   - Your trained model file
-   - deployment/deploy.sh script
+# run locally
+python -m app.main
 
-5. **Do NOT include:**
-   - .env file (contains secrets!)
-   - __pycache__ directories
-   - .venv directories
-   - Large data files
-   - Your actual API keys
+# or build container
+podman build -t mtcars-fastapi .
 
-6. **Test your deployment:**
-   ```bash
-   # Test locally
-   uvicorn main:app --reload
-   
-   # Test with curl
-   curl -X POST http://localhost:8000/v1/predict \
-     -H "Content-Type: application/json" \
-     -H "api-key: your_key" \
-     -d '{"features": [1.0, 2.0, 3.0]}'
-   
-   # Run tests
-   pytest tests/
-   ```
-
-7. **Commit and push:**
-   ```bash
-   git add .
-   git commit -m "Add assignment 3 submission - yourname"
-   git push origin hw3-yourname
-   ```
-
-8. **Create a pull request:**
-   - Base: `assignment-3`
-   - Compare: `hw3-yourname`
-   - Title: "Assignment 3 - Your Name"
-   - Description: Include:
-     - Your deployed API URL
-     - Brief description of your model
-     - Any special setup instructions
-     - Known limitations
-
-## Example Code Snippets
-
-### Complete FastAPI App Template
-
-```python
-from fastapi import FastAPI, Depends, HTTPException, Header
-from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-import joblib
-import logging
-import uuid
-from models import PredictionRequest, PredictionResponse
-from auth import verify_api_key
-from config import settings
-
-# Setup logging
-logging.basicConfig(level=settings.log_level)
-logger = logging.getLogger(__name__)
-
-# Create app
-app = FastAPI(
-    title="My ML API",
-    description="Production ML model API",
-    version="1.0.0"
-)
-
-# Add CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Add rate limiting
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Global model variable
-model = None
-
-@app.on_event("startup")
-def load_model():
-    global model
-    try:
-        model = joblib.load(settings.model_path)
-        logger.info(f"Model loaded from {settings.model_path}")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        raise
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-@app.get("/ready")
-def readiness_check():
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    return {"status": "ready"}
-
-@app.post("/v1/predict", response_model=PredictionResponse)
-@limiter.limit("100/minute")
-def predict(
-    request: PredictionRequest,
-    api_key: str = Depends(verify_api_key)
-):
-    try:
-        prediction = model.predict([request.features])[0]
-        confidence = model.predict_proba([request.features]).max()
-        
-        return PredictionResponse(
-            prediction=float(prediction),
-            confidence=float(confidence),
-            model_version="v1.0",
-            request_id=str(uuid.uuid4())
-        )
-    except Exception as e:
-        logger.error(f"Prediction failed: {e}")
-        raise HTTPException(status_code=500, detail="Prediction failed")
+# run container
+podman run --rm -p 8080:8080 mtcars-fastapi
 ```
 
 ## Resources
@@ -553,35 +367,26 @@ def predict(
 ### FastAPI
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Pydantic Documentation](https://docs.pydantic.dev/)
-- [Uvicorn Documentation](https://www.uvicorn.org/)
+
+### Modeling
+- [scikit-learn Documentation](https://scikit-learn.org/stable/)
 
 ### Containerization
 - [Podman Documentation](https://podman.io/docs)
-- [Dockerfile Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
-- [Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)
 
 ### Deployment
 - [Google Cloud Run Docs](https://cloud.google.com/run/docs)
-- [Cloud Run Quickstart](https://cloud.google.com/run/docs/quickstarts)
-- [Secret Manager](https://cloud.google.com/secret-manager/docs)
 
-### Testing
-- [Pytest Documentation](https://docs.pytest.org/)
-- [FastAPI Testing](https://fastapi.tiangolo.com/tutorial/testing/)
+## Common Issues
 
-## Common Issues and Solutions
+### Model file not found
+Make sure your trained model is saved in the location expected by your API.
 
-### Issue: Model not loading
-**Solution:** Check file path, ensure model file is in container, verify permissions
+### Container runs but API fails
+Check your application startup command, port, and model path.
 
-### Issue: Authentication not working
-**Solution:** Verify API key is set in environment, check header name matches
+### Local request fails
+Check that your request JSON matches the predictor names and types expected by your Pydantic model.
 
-### Issue: Container fails to start
-**Solution:** Check logs with `podman logs`, verify PORT environment variable
-
-### Issue: Cloud Run deployment fails
-**Solution:** Check image is pushed to GCR, verify project ID, check IAM permissions
-
-### Issue: API returns 503
-**Solution:** Check readiness endpoint, verify model loaded successfully
+### Deployment differs from local
+Make sure the same model artifact and environment variables are available in the deployed container.
